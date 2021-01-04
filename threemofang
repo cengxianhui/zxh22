@@ -1,0 +1,2457 @@
+
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+#include<conio.h>
+
+typedef enum 
+{
+    blue=1,red,yellow,green,white,orange
+}Colors;
+/*
+** breif: 魔方面，为了使用方便，不使用下标0，即
+**        11  12  13
+**        21  22  23
+**        31  32  33
+*/
+typedef struct 
+{
+    Colors s[4][4];
+}Surface;
+
+/*
+** brief: 定义魔方结构体
+*/
+typedef struct 
+{
+    Surface up,down,front,back,left,right;
+}Cube;
+/*
+** brief:定义一个魔方
+*/
+Cube g_magic;
+
+/******************************************************************/
+
+/*
+** brief: 将sur面顺时针转i次
+** sur: 魔方面
+** i: 转的次数
+*/
+void surface_clock( Surface *sur,int i )
+{
+    Surface t;
+    for(;i>0;i--)
+    {
+        t=*sur;
+        sur->s[1][1]=t.s[3][1];
+        sur->s[1][2]=t.s[2][1];
+        sur->s[1][3]=t.s[1][1];
+
+        sur->s[2][1]=t.s[3][2];
+        sur->s[2][3]=t.s[1][2];
+
+        sur->s[3][1]=t.s[3][3];
+        sur->s[3][2]=t.s[2][3];
+        sur->s[3][3]=t.s[1][3];
+    }
+}
+/*
+** brief: 将sur面逆时针转i次
+** sur: 魔方面
+** i: 转的次数
+*/
+void surface_anticlock( Surface *sur,int i )
+{
+    Surface t;
+    for(;i>0;i--)
+    {
+        t=*sur;
+        sur->s[1][1]=t.s[1][3];
+        sur->s[1][2]=t.s[2][3];
+        sur->s[1][3]=t.s[3][3];
+        sur->s[2][1]=t.s[1][2];
+        sur->s[2][3]=t.s[3][2];
+        sur->s[3][1]=t.s[1][1];
+        sur->s[3][2]=t.s[2][1];
+        sur->s[3][3]=t.s[3][1];
+    }
+}
+/*
+** brief: 将魔方的Front顺时针转i次，并将转后
+**        结果以数字和颜色输出到LCD
+** m: 魔方
+** i: 转的次数
+*/
+void front_clock( Cube *m,int i )
+{
+    Cube n;
+    for(;i>0;i--)
+    {
+        n=*m;
+        surface_clock(&m->front,1);
+
+        m->right.s[1][1]=n.up.s[3][1];
+        m->right.s[2][1]=n.up.s[3][2];
+        m->right.s[3][1]=n.up.s[3][3];
+
+        m->down.s[1][1]=n.right.s[3][1];
+        m->down.s[1][2]=n.right.s[2][1];
+        m->down.s[1][3]=n.right.s[1][1];
+
+        m->left.s[1][3]=n.down.s[1][1];
+        m->left.s[2][3]=n.down.s[1][2];
+        m->left.s[3][3]=n.down.s[1][3];
+
+        m->up.s[3][1]=n.left.s[3][3];
+        m->up.s[3][2]=n.left.s[2][3];
+        m->up.s[3][3]=n.left.s[1][3];   
+    }
+}
+/*
+** brief: 将魔方的Front逆时针转i次，并将转后
+**        结果以数字和颜色输出到LCD
+** sur: 魔方
+** i: 转的次数
+*/
+void front_anticlock( Cube *m,int i )
+{
+    Cube n;
+    for(;i>0;i--)
+    {
+        n=*m;
+        surface_anticlock(&m->front,1); 
+        m->right.s[1][1]=n.down.s[1][3];
+        m->right.s[2][1]=n.down.s[1][2];
+        m->right.s[3][1]=n.down.s[1][1];
+        m->down.s[1][1]=n.left.s[1][3];
+        m->down.s[1][2]=n.left.s[2][3];
+        m->down.s[1][3]=n.left.s[3][3];
+        m->left.s[1][3]=n.up.s[3][3];
+        m->left.s[2][3]=n.up.s[3][2];
+        m->left.s[3][3]=n.up.s[3][1];   
+        m->up.s[3][1]=n.right.s[1][1];
+        m->up.s[3][2]=n.right.s[2][1];
+        m->up.s[3][3]=n.right.s[3][1];      
+    }
+}
+/*
+** brief: 将魔方的Back顺时针转i次，并将转后
+**        结果以数字和颜色输出到LCD
+** sur: 魔方
+** i: 转的次数
+*/
+void back_clock( Cube *m,int i )
+{
+    Cube n;
+    for(;i>0;i--)
+    {
+        n=*m;
+        surface_clock(&m->back,1);
+        m->right.s[1][3]=n.down.s[3][3];
+        m->right.s[2][3]=n.down.s[3][2];
+        m->right.s[3][3]=n.down.s[3][1];
+        m->down.s[3][1]=n.left.s[1][1];
+        m->down.s[3][2]=n.left.s[2][1];
+        m->down.s[3][3]=n.left.s[3][1];
+        m->left.s[1][1]=n.up.s[1][3];
+        m->left.s[2][1]=n.up.s[1][2];
+        m->left.s[3][1]=n.up.s[1][1];
+        m->up.s[1][1]=n.right.s[1][3];
+        m->up.s[1][2]=n.right.s[2][3];
+        m->up.s[1][3]=n.right.s[3][3];    
+    }   
+}
+/*
+** brief: 将魔方的Back逆时针转i次，并将转后
+**        结果以数字和颜色输出到LCD
+** sur: 魔方
+** i: 转的次数
+*/
+void back_anticlock( Cube *m,int i )
+{
+    Cube n;
+    for(;i>0;i--)
+    {
+        n=*m;
+        surface_anticlock(&m->back,1);
+        m->right.s[1][3]=n.up.s[1][1];
+        m->right.s[2][3]=n.up.s[1][2];
+        m->right.s[3][3]=n.up.s[1][3];
+        m->down.s[3][1]=n.right.s[3][3];
+        m->down.s[3][2]=n.right.s[2][3];
+        m->down.s[3][3]=n.right.s[1][3];        
+        m->left.s[1][1]=n.down.s[3][1];
+        m->left.s[2][1]=n.down.s[3][2];
+        m->left.s[3][1]=n.down.s[3][3]; 
+        m->up.s[1][1]=n.left.s[3][1];
+        m->up.s[1][2]=n.left.s[2][1];
+        m->up.s[1][3]=n.left.s[1][1];     
+    }
+}
+/*
+** brief: 将魔方的Right顺时针转i次，并将转后
+**        结果以数字和颜色输出到LCD
+** sur: 魔方
+** i: 转的次数
+*/
+void right_clock( Cube *m,int i )
+{
+    Cube n;
+    for(;i>0;i--)
+    {
+        n=*m;
+        surface_clock(&m->right,1);
+        m->up.s[1][3]=n.front.s[1][3];
+        m->up.s[2][3]=n.front.s[2][3];
+        m->up.s[3][3]=n.front.s[3][3];
+        m->front.s[1][3]=n.down.s[1][3];
+        m->front.s[2][3]=n.down.s[2][3];
+        m->front.s[3][3]=n.down.s[3][3];
+        m->down.s[1][3]=n.back.s[3][1];
+        m->down.s[2][3]=n.back.s[2][1];
+        m->down.s[3][3]=n.back.s[1][1];
+        m->back.s[3][1]=n.up.s[1][3];
+        m->back.s[2][1]=n.up.s[2][3];
+        m->back.s[1][1]=n.up.s[3][3];       
+    }
+}
+/*
+** brief: 将魔方的Right逆时针转i次，并将转后
+**        结果以数字和颜色输出到LCD
+** sur: 魔方
+** i: 转的次数
+*/
+void right_anticlock( Cube *m,int i )
+{
+    Cube n;
+    for(;i>0;i--)
+    {
+        n=*m;
+        surface_anticlock(&m->right,1);
+        m->up.s[1][3]=n.back.s[3][1];
+        m->up.s[2][3]=n.back.s[2][1];
+        m->up.s[3][3]=n.back.s[1][1];
+        m->front.s[1][3]=n.up.s[1][3];
+        m->front.s[2][3]=n.up.s[2][3];
+        m->front.s[3][3]=n.up.s[3][3];  
+        m->down.s[1][3]=n.front.s[1][3];
+        m->down.s[2][3]=n.front.s[2][3];
+        m->down.s[3][3]=n.front.s[3][3];        
+        m->back.s[3][1]=n.down.s[1][3];
+        m->back.s[2][1]=n.down.s[2][3];
+        m->back.s[1][1]=n.down.s[3][3]; 
+    }
+}
+/*
+** brief: 将魔方的Left顺时针转i次，并将转后
+**        结果以数字和颜色输出到LCD
+** sur: 魔方
+** i: 转的次数
+*/
+void left_clock( Cube *m,int i )
+{   
+    Cube n;
+    for(;i>0;i--)
+    {
+        n=*m;
+        surface_clock(&m->left,1);
+        m->up.s[1][1]=n.back.s[3][3];
+        m->up.s[2][1]=n.back.s[2][3];
+        m->up.s[3][1]=n.back.s[1][3];
+        m->back.s[1][3]=n.down.s[3][1];
+        m->back.s[2][3]=n.down.s[2][1];
+        m->back.s[3][3]=n.down.s[1][1];
+        m->down.s[1][1]=n.front.s[1][1];
+        m->down.s[2][1]=n.front.s[2][1];
+        m->down.s[3][1]=n.front.s[3][1];
+        m->front.s[1][1]=n.up.s[1][1];
+        m->front.s[2][1]=n.up.s[2][1];
+        m->front.s[3][1]=n.up.s[3][1];  
+    }
+}
+/*
+** brief: 将魔方的Left逆时针转i次，并将转后
+**        结果以数字和颜色输出到LCD
+** sur: 魔方
+** i: 转的次数
+*/
+void left_anticlock( Cube *m,int i )
+{   
+    Cube n;
+    for(;i>0;i--)
+    {
+        n=*m;
+        surface_anticlock(&m->left,1);
+        m->up.s[1][1]=n.front.s[1][1];
+        m->up.s[2][1]=n.front.s[2][1];
+        m->up.s[3][1]=n.front.s[3][1];
+        m->back.s[1][3]=n.up.s[3][1];
+        m->back.s[2][3]=n.up.s[2][1];
+        m->back.s[3][3]=n.up.s[1][1];
+        m->down.s[1][1]=n.back.s[3][3];
+        m->down.s[2][1]=n.back.s[2][3];
+        m->down.s[3][1]=n.back.s[1][3];
+
+        m->front.s[1][1]=n.down.s[1][1];
+        m->front.s[2][1]=n.down.s[2][1];
+        m->front.s[3][1]=n.down.s[3][1];            
+    }
+}
+/*
+** brief: 将魔方的Up顺时针转i次，并将转后
+**        结果以数字和颜色输出到LCD,之所以
+**        这个函数名字没有使用单字符U是因为
+**        jpeg.c中定义了 U 变量冲突
+** sur: 魔方
+** i: 转的次数
+*/
+void up_clock( Cube *m,int i )
+{
+    Cube n;
+    for(;i>0;i--)
+    {
+        n=*m;
+        surface_clock(&m->up,1);
+        m->front.s[1][1]=n.right.s[1][1];
+        m->front.s[1][2]=n.right.s[1][2];
+        m->front.s[1][3]=n.right.s[1][3];
+        m->right.s[1][1]=n.back.s[1][1];
+        m->right.s[1][2]=n.back.s[1][2];
+        m->right.s[1][3]=n.back.s[1][3];
+        m->back.s[1][1]=n.left.s[1][1];
+        m->back.s[1][2]=n.left.s[1][2];
+        m->back.s[1][3]=n.left.s[1][3];
+        m->left.s[1][1]=n.front.s[1][1];
+        m->left.s[1][2]=n.front.s[1][2];
+        m->left.s[1][3]=n.front.s[1][3];    
+    }
+}
+/*
+** brief: 将魔方的Up逆时针转i次，并将转后
+**        结果以数字和颜色输出到LCD
+** sur: 魔方
+** i: 转的次数
+*/
+void up_anticlock( Cube *m,int i )
+{
+    Cube n;
+    for(;i>0;i--)
+    {
+        n=*m;
+        surface_anticlock(&m->up,1);
+        m->front.s[1][1]=n.left.s[1][1];
+        m->front.s[1][2]=n.left.s[1][2];
+        m->front.s[1][3]=n.left.s[1][3];
+        m->right.s[1][1]=n.front.s[1][1];
+        m->right.s[1][2]=n.front.s[1][2];
+        m->right.s[1][3]=n.front.s[1][3];   
+        m->back.s[1][1]=n.right.s[1][1];
+        m->back.s[1][2]=n.right.s[1][2];
+        m->back.s[1][3]=n.right.s[1][3];    
+        m->left.s[1][1]=n.back.s[1][1];
+        m->left.s[1][2]=n.back.s[1][2];
+        m->left.s[1][3]=n.back.s[1][3];
+    }
+}
+/*
+** brief: 将魔方的Down顺时针转i次，并将转后
+**        结果以数字和颜色输出到LCD
+** sur: 魔方
+** i: 转的次数
+*/
+void down_clock(Cube *m,int i)
+{
+    Cube n;
+    for(;i>0;i--)
+    {
+        n=*m;
+        surface_clock(&m->down,1);
+        m->front.s[3][1]=n.left.s[3][1];
+        m->front.s[3][2]=n.left.s[3][2];
+        m->front.s[3][3]=n.left.s[3][3];
+        m->left.s[3][1]=n.back.s[3][1];
+        m->left.s[3][2]=n.back.s[3][2];
+        m->left.s[3][3]=n.back.s[3][3];
+        m->back.s[3][1]=n.right.s[3][1];
+        m->back.s[3][2]=n.right.s[3][2];
+        m->back.s[3][3]=n.right.s[3][3];
+        m->right.s[3][1]=n.front.s[3][1];
+        m->right.s[3][2]=n.front.s[3][2];
+        m->right.s[3][3]=n.front.s[3][3];   
+    }
+}
+/*
+** brief: 将魔方的Down逆时针转i次，并将转后
+**        结果以数字和颜色输出到LCD
+** sur: 魔方
+** i: 转的次数
+*/
+void down_anticlock( Cube *m,int i )
+{
+    Cube n;
+    for(;i>0;i--)
+    {
+        n=*m;
+        surface_anticlock(&m->down,1);
+        m->front.s[3][1]=n.right.s[3][1];
+        m->front.s[3][2]=n.right.s[3][2];
+        m->front.s[3][3]=n.right.s[3][3];   
+        m->left.s[3][1]=n.front.s[3][1];
+        m->left.s[3][2]=n.front.s[3][2];
+        m->left.s[3][3]=n.front.s[3][3];    
+        m->back.s[3][1]=n.left.s[3][1];
+        m->back.s[3][2]=n.left.s[3][2];
+        m->back.s[3][3]=n.left.s[3][3];
+        m->right.s[3][1]=n.back.s[3][1];
+        m->right.s[3][2]=n.back.s[3][2];
+        m->right.s[3][3]=n.back.s[3][3];    
+    }
+}
+/*
+** brief: 将魔方的整体顺时针转i次，并将转后
+**        结果以数字和颜色输出到LCD(Up Down不动)
+** sur: 魔方
+** i: 转的次数
+*/
+void cube_clock( Cube *m,int i )
+{ 
+    u8 j,k;
+    u8 cc[4][4];
+    for(;i>0;i--)
+    {
+        for(j=1;j<4;j++)
+        {
+            for(k=1;k<4;k++)
+            {
+                cc[j][k]=(u8)m->front.s[j][k];
+            }
+        }
+        surface_clock(&m->up,1);
+        surface_anticlock(&m->down,1);
+        for(j=1;j<4;j++)
+        {
+            for(k=1;k<4;k++)
+            {
+                m->front.s[j][k]=m->right.s[j][k];
+            }
+        }
+        for(j=1;j<4;j++)
+        {
+            for(k=1;k<4;k++)
+            {
+                m->right.s[j][k]=m->back.s[j][k];
+            }
+        }
+        for(j=1;j<4;j++)
+        {
+            for(k=1;k<4;k++)
+            {
+                m->back.s[j][k]=m->left.s[j][k];
+            }
+        }
+        for(j=1;j<4;j++)
+        {
+            for(k=1;k<4;k++)
+            {
+                m->left.s[j][k]=(Colors)cc[j][k];
+            }
+        }                                   
+    }
+}
+
+/********************************************************************/
+/*
+** brief: 处理底块在中间层侧愣的八种情况
+*/
+void cfop_downIn_mid( Cube *m )
+{
+    while ( (m->front.s[2][1] == m->down.s[2][2]) || (m->front.s[2][3] == m->down.s[2][2]) 
+            || (m->right.s[2][1] == m->down.s[2][2])|| (m->right.s[2][3] == m->down.s[2][2]) 
+            || (m->back.s[2][1] == m->down.s[2][2]) || (m->back.s[2][3] == m->down.s[2][2]) 
+            || (m->left.s[2][1] == m->down.s[2][2]) || (m->left.s[2][3] == m->down.s[2][2]))
+    {
+        if (m->front.s[2][1]== m->down.s[2][2])
+        {
+            while (m->up.s[2][1] ==m->down.s[2][2])
+                up_clock(m,1);
+            left_anticlock(m, 1);
+        }
+        else if (m->front.s[2][3] == m->down.s[2][2])
+        {
+            while (m->up.s[2][3] == m->down.s[2][2])
+                up_clock(m,1);
+            right_clock(m,1);
+        }
+        else if (m->right.s[2][1] == m->down.s[2][2])
+        {
+            while (m->up.s[3][2] == m->down.s[2][2])
+                up_clock(m,1);
+            front_anticlock(m,1);
+        }
+        else if (m->right.s[2][3] == m->down.s[2][2])
+        {
+            while (m->up.s[1][2] == m->down.s[2][2])
+                up_clock(m,1);
+            back_clock(m,1);
+        }
+        else if (m->back.s[2][3] == m->down.s[2][2])
+        {
+            while (m->up.s[2][1] == m->down.s[2][2])
+                up_clock(m,1);
+            left_clock(m,1);
+        }
+        else if (m->back.s[2][1] == m->down.s[2][2])
+        {
+            while (m->up.s[2][3] == m->down.s[2][2])
+                up_clock(m,1);
+            right_anticlock(m,1);
+        }
+        else if (m->left.s[2][1] == m->down.s[2][2])
+        {
+            while (m->up.s[1][2] == m->down.s[2][2])
+                up_clock(m,1);
+            back_anticlock(m,1);
+        }
+        else
+        {
+            while (m->up.s[3][2] == m->down.s[2][2])
+                up_clock(m,1);
+            front_clock(m,1);
+        }
+    }   
+}
+
+/*
+** breif: 底层十字+四个侧面的中心与中心下面的一块颜色相同
+*/
+void cfop_cross( Cube *cube )
+{
+    while (!(cube->front.s[2][2] == cube->front.s[3][2] && cube->back.s[2][2] == cube->back.s[3][2] 
+            && cube->left.s[2][2] == cube->left.s[3][2] && cube->right.s[2][2] == cube->right.s[3][2] 
+            && cube->down.s[2][3] == cube->down.s[2][2] && cube->down.s[2][1] == cube->down.s[2][2] 
+            && cube->down.s[3][2] == cube->down.s[2][2] && cube->down.s[1][2] == cube->down.s[2][2])) 
+    {
+        //处理底块在侧棱的四种情况
+        while ((cube->front.s[1][2] == cube->down.s[2][2]) 
+                || cube->right.s[1][2] == cube->down.s[2][2] 
+                || (cube->back.s[1][2] == cube->down.s[2][2]) 
+                || (cube->left.s[1][2] == cube->down.s[2][2]))
+        {
+            if (cube->front.s[1][2]== cube->down.s[2][2])
+            {
+                front_clock(cube,1);
+                cfop_downIn_mid(cube);
+            }
+            else if (cube->right.s[1][2]==cube->down.s[2][2])
+            {
+                right_clock(cube,1);
+                cfop_downIn_mid(cube);
+            }
+            else if (cube->back.s[1][2] == cube->down.s[2][2])
+            {
+                back_clock(cube,1);
+                cfop_downIn_mid(cube);
+            }
+            else
+            {
+                left_clock(cube,1);
+                cfop_downIn_mid(cube);
+            }
+        }
+        //处理底块在第二层侧棱的八种情况
+        cfop_downIn_mid(cube);
+
+        //处理底块在第三层侧棱的四种情况
+        while ((cube->front.s[3][2] == cube->down.s[2][2]) 
+                || (cube->right.s[3][2] == cube->down.s[2][2]) 
+                || (cube->back.s[3][2] == cube->down.s[2][2]) 
+                || (cube->left.s[3][2] == cube->down.s[2][2]))
+        {
+            if (cube->front.s[3][2] == cube->down.s[2][2])
+            {
+                while (cube->up.s[3][2] == cube->down.s[2][2])
+                    up_clock(cube,1);
+                front_clock(cube,1);
+                cfop_downIn_mid(cube);
+            }
+            else if (cube->right.s[3][2]== cube->down.s[2][2])
+            {
+                while (cube->up.s[2][3] == cube->down.s[2][2])
+                    up_clock(cube,1);
+                right_clock(cube,1);
+                cfop_downIn_mid(cube);
+            }
+            else if (cube->back.s[3][2] == cube->down.s[2][2])
+            {
+                while (cube->up.s[1][2] == cube->down.s[2][2])
+                    up_clock(cube,1);
+                back_clock(cube,1);
+                cfop_downIn_mid(cube);
+            }
+            else
+            {
+                while (cube->up.s[2][1] == cube->down.s[2][2])
+                        up_clock(cube,1);
+                left_clock(cube,1);
+                cfop_downIn_mid(cube);
+            }
+        }
+        //底面颜色对 侧面颜色不对
+        while ((cube->down.s[1][2]== cube->down.s[2][2]&&cube->front.s[3][2]!= cube->front.s[2][2]) 
+            || (cube->down.s[2][1] == cube->down.s[2][2] && cube->left.s[3][2] != cube->left.s[2][2]) 
+            || (cube->down.s[3][2] == cube->down.s[2][2]&& cube->back.s[3][2]!= cube->back.s[2][2]) 
+            || (cube->down.s[2][3] == cube->down.s[2][2] && cube->right.s[3][2]!= cube->right.s[2][2]))
+        {
+            if (cube->down.s[1][2] == cube->down.s[2][2] && cube->front.s[3][2] != cube->front.s[2][2])
+            {
+                while (cube->up.s[3][2] == cube->down.s[2][2])
+                        up_clock(cube,1);
+                front_clock(cube,1);
+                cfop_downIn_mid(cube);
+            }
+            if (cube->down.s[2][1] == cube->down.s[2][2] && cube->left.s[3][2] != cube->left.s[2][2])
+            {
+                while (cube->up.s[2][1] ==cube->down.s[2][2])
+                        up_clock(cube,1);
+                left_clock(cube,1);
+                cfop_downIn_mid(cube);
+            }
+            if (cube->down.s[3][2] == cube->down.s[2][2] && cube->back.s[3][2] != cube->back.s[2][2])
+            {
+                while (cube->up.s[1][2] == cube->down.s[2][2])
+                        up_clock(cube,1);
+                back_clock(cube,1);
+                cfop_downIn_mid(cube);
+            }
+            if (cube->down.s[2][3] == cube->down.s[2][2] && cube->right.s[3][2] != cube->right.s[2][2])
+            {
+                while (cube->up.s[2][3] == cube->down.s[2][2])
+                        up_clock(cube,1);
+                right_clock(cube,1);
+                cfop_downIn_mid(cube);
+            }
+        }
+        //处理中心棱块和十字花的位置
+        while (1)
+        {
+            if (cube->front.s[1][2] == cube->front.s[2][2] && cube->up.s[3][2] == cube->down.s[2][2])
+                    front_clock(cube,2);
+            else if (cube->left.s[1][2] == cube->left.s[2][2] &&cube->up.s[2][1] ==  cube->down.s[2][2])
+                    left_clock(cube,2);
+            else if (cube->right.s[1][2] == cube->right.s[2][2] && cube->up.s[2][3] ==  cube->down.s[2][2])
+                    right_clock(cube,2);
+            else if (cube->back.s[1][2] == cube->back.s[2][2] && cube->up.s[1][2] == cube->down.s[2][2])
+                    back_clock(cube,2);
+            else if (((cube->front.s[2][2]==cube->front.s[3][2]) && (cube->back.s[2][2] == cube->back.s[3][2]) 
+                && (cube->left.s[2][2] ==cube->left.s[3][2]) && (cube->right.s[2][2] == cube->right.s[3][2] )) 
+                && (cube->down.s[3][2]== cube->down.s[2][2]) && (cube->down.s[2][3]== cube->down.s[2][2]) 
+                && (cube->down.s[2][1] == cube->down.s[2][2]) && (cube->down.s[1][2]== cube->down.s[2][2]))
+                    break;
+            else
+                    up_clock(cube,1);
+        }
+    }
+}
+/*
+** brief: 第一层 第二层复原
+*/
+void cfop_f2l( Cube *cube )
+{
+    //底层+四个侧面的31=22，那么四个侧面的33必然等于22
+    while (!(cube->down.s[3][3]==cube->down.s[2][2]&&cube->down.s[1][3]== cube->down.s[2][2]
+        &&cube->down.s[3][1]== cube->down.s[2][2] &&cube->down.s[1][1]==cube->down.s[2][2] 
+        &&cube->front.s[3][1]==cube->front.s[2][2]&&cube->right.s[3][1]==cube->right.s[2][2] 
+        &&cube->back.s[3][1] == cube->back.s[2][2]&&cube->left.s[3][3] == cube->left.s[2][2]))
+    {
+        //底块在上层四角
+        if (cube->up.s[1][1]== cube->down.s[2][2]
+            ||cube->up.s[1][3]==cube->down.s[2][2]
+            ||cube->up.s[3][1] == cube->down.s[2][2] 
+            || cube->up.s[3][3]== cube->down.s[2][2] )
+        {
+            if (cube->up.s[3][3]== cube->down.s[2][2]
+                && cube->front.s[1][3] == cube->right.s[2][2] 
+                &&cube->right.s[1][1]== cube->front.s[2][2])
+            {
+                right_clock(cube,1);
+                up_anticlock(cube,1);
+                right_anticlock(cube,1);
+                front_anticlock(cube,1);
+                up_clock(cube,2);
+                front_clock(cube,1);
+            }
+            else if (cube->up.s[3][1]== cube->down.s[2][2] 
+                &&cube->front.s[1][1]== cube->left.s[2][2] 
+                && cube->left.s[1][3]== cube->front.s[2][2])
+            {   
+                left_anticlock(cube,1);
+                up_clock(cube,1);
+                left_clock(cube,1);
+                front_clock(cube,1);
+                up_clock(cube,2);
+                front_anticlock(cube,1);
+            }
+            else if (cube->up.s[1][3]== cube->down.s[2][2]
+                && cube->right.s[1][3] ==cube->back.s[2][2] 
+                &&cube->back.s[1][1]==cube->right.s[2][2])
+            {
+                back_clock(cube,1);
+                up_anticlock(cube,1);
+                back_anticlock(cube,1);
+                right_anticlock(cube,1);
+                up_clock(cube,2);
+                right_clock(cube,1);
+            }
+            else if (cube->up.s[1][1] == cube->down.s[2][2]
+                && cube->left.s[1][1]== cube->back.s[2][2] 
+                && cube->back.s[1][3]== cube->left.s[2][2])
+            {                           
+                back_anticlock(cube,1);
+                up_clock(cube,1);
+                back_clock(cube,1);
+                left_clock(cube,1);
+                up_clock(cube,2);
+                left_anticlock(cube,1);
+            }
+            else
+                up_clock(cube,1);
+        }
+        //底块在侧面的上面两角
+        else if (cube->front.s[1][1]== cube->down.s[2][2] || cube->front.s[1][3]== cube->down.s[2][2] 
+                || cube->back.s[1][3]== cube->down.s[2][2]|| cube->back.s[1][1]== cube->down.s[2][2]
+                || cube->left.s[1][1] ==cube->down.s[2][2]|| cube->left.s[1][3] == cube->down.s[2][2]
+                || cube->right.s[1][3]==cube->down.s[2][2]|| cube->right.s[1][1] == cube->down.s[2][2])
+        {
+                if (cube->front.s[1][1] == cube->down.s[2][2] 
+                    &&cube->up.s[3][1]== cube->front.s[2][2]
+                    && cube->left.s[1][3]== cube->left.s[2][2])
+                {
+                    front_clock(cube,1);
+                    up_clock(cube,1);
+                    front_anticlock(cube,1);
+                }
+                else if (cube->front.s[1][3]== cube->down.s[2][2] 
+                    && cube->up.s[3][3]== cube->front.s[2][2]
+                    && cube->right.s[1][1]== cube->right.s[2][2])
+                {
+                    front_anticlock(cube,1);
+                    up_anticlock(cube,1);
+                    front_clock(cube,1);
+                }
+                else if (cube->back.s[1][3]==cube->down.s[2][2] 
+                    &&cube->up.s[1][1] == cube->back.s[2][2] 
+                    && cube->left.s[1][1]== cube->left.s[2][2])
+                {
+                    back_anticlock(cube,1);
+                    up_anticlock(cube,1);
+                    back_clock(cube,1);
+                }
+                else if (cube->back.s[1][1]== cube->down.s[2][2] 
+                    && cube->up.s[1][3] == cube->back.s[2][2]
+                    &&cube->right.s[1][3]== cube->right.s[2][2])
+                {
+                    back_clock(cube,1);
+                    up_clock(cube,1);
+                    back_anticlock(cube,1);
+                }
+                else if (cube->left.s[1][1]== cube->down.s[2][2] 
+                    &&cube->up.s[1][1]== cube->left.s[2][2]
+                    && cube->back.s[1][3]== cube->back.s[2][2])
+                {
+                    left_clock(cube,1);
+                    up_clock(cube,1);
+                    left_anticlock(cube,1);
+                }
+                else if (cube->left.s[1][3] == cube->down.s[2][2] 
+                    && cube->up.s[3][1] == cube->left.s[2][2] 
+                    && cube->front.s[1][1] == cube->front.s[2][2])
+                {       
+                    left_anticlock(cube,1);
+                    up_anticlock(cube,1);
+                    left_clock(cube,1);
+                }
+                else if (cube->right.s[1][3]== cube->down.s[2][2] 
+                    && cube->up.s[1][3] ==cube->right.s[2][2] 
+                    &&cube->back.s[1][1] == cube->back.s[2][2])
+                {
+                    right_anticlock(cube,1);
+                    up_anticlock(cube,1);
+                    right_clock(cube,1);
+                }
+                else if (cube->right.s[1][1] == cube->down.s[2][2] 
+                    && cube->up.s[3][3] == cube->right.s[2][2]
+                    && cube->front.s[1][3] == cube->front.s[2][2])
+                {
+                    right_clock(cube,1);
+                    up_clock(cube,1);
+                    right_anticlock(cube,1);
+                }
+                else
+                    up_clock(cube,1);
+        }
+        //底块在底层但是位置不对
+        else
+        {
+            if (cube->front.s[3][3]== cube->down.s[2][2] || cube->right.s[3][1] == cube->down.s[2][2] 
+                || (cube->down.s[1][3]== cube->down.s[2][2] && (cube->front.s[3][3]!= cube->front.s[2][2]||cube->right.s[3][1]!= cube->right.s[2][2])))
+            {
+                right_clock(cube,1);
+                up_clock(cube,1);
+                right_anticlock(cube,1);
+            }
+            else if (cube->front.s[3][1]== cube->down.s[2][2]|| cube->left.s[3][3] == cube->down.s[2][2] 
+                || (cube->down.s[1][1]== cube->down.s[2][2] && (cube->front.s[3][1]!=cube->front.s[2][2]||cube->left.s[3][3]!= cube->left.s[2][2])))
+            {
+                left_anticlock(cube,1);
+                up_anticlock(cube,1);
+                left_clock(cube,1);
+            }
+            else if (cube->left.s[3][1]== cube->down.s[2][2] || cube->back.s[3][3] == cube->down.s[2][2]
+                || (cube->down.s[3][1]== cube->down.s[2][2] && (cube->left.s[3][1]!= cube->left.s[2][2]|| cube->back.s[3][3] != cube->back.s[2][2])))
+            {
+                back_anticlock(cube,1);
+                up_anticlock(cube,1);
+                back_clock(cube,1);
+            }
+            else
+            {
+                back_clock(cube,1);
+                up_clock(cube,1);
+                back_anticlock(cube,1);
+            }
+        }
+    }
+    //中间层
+    while (!(cube->front.s[2][3]== cube->front.s[2][2] && cube->right.s[2][1]== cube->right.s[2][2] 
+            && cube->right.s[2][3] == cube->right.s[2][2]&&cube->back.s[2][3] == cube->back.s[2][2] 
+            && cube->back.s[2][1]== cube->back.s[2][2] && cube->left.s[2][1] ==cube->left.s[2][2] 
+            && cube->left.s[2][3]== cube->left.s[2][2] && cube->front.s[2][1]== cube->front.s[2][2]))
+    {
+        //中间层在上层的情况
+        if ((cube->up.s[1][2]!= cube->up.s[2][2] && cube->back.s[1][2]!= cube->up.s[2][2]) 
+            || (cube->up.s[2][1] != cube->up.s[2][2]&& cube->left.s[1][2]!= cube->up.s[2][2]) 
+            || (cube->up.s[3][2] != cube->up.s[2][2]&& cube->front.s[1][2]!= cube->up.s[2][2]) 
+            || (cube->up.s[2][3] != cube->up.s[2][2] && cube->right.s[1][2]!= cube->up.s[2][2]))
+        {
+            //中间的色块在上面的12位置
+            if (cube->up.s[1][2]!= cube->up.s[2][2] && cube->back.s[1][2] == cube->back.s[2][2])
+            {
+                if (cube->up.s[1][2]== cube->left.s[2][2])
+                {
+                    up_clock(cube,1);
+                    left_clock(cube,1);
+                    up_anticlock(cube,1);
+                    left_anticlock(cube,1);
+                    up_anticlock(cube,1);
+                    back_anticlock(cube,1);
+                    up_clock(cube,1);
+                    back_clock(cube,1);
+                }
+                else
+                {
+                    up_anticlock(cube,1);
+                    right_anticlock(cube,1);
+                    up_clock(cube,1);
+                    right_clock(cube,1);
+                    up_clock(cube,1);
+                    back_clock(cube,1);
+                    up_anticlock(cube,1);
+                    back_anticlock(cube,1);
+                }
+            }
+            //中间色块在上面的21位置
+            else if (cube->up.s[2][1]!= cube->up.s[2][2]&& cube->left.s[1][2] == cube->left.s[2][2])
+            {
+                if (cube->up.s[2][1]==cube->back.s[2][2])
+                {
+                    up_anticlock(cube,1);
+                    back_anticlock(cube,1);
+                    up_clock(cube,1);
+                    back_clock(cube,1);
+                    up_clock(cube,1);
+                    left_clock(cube,1);
+                    up_anticlock(cube,1);
+                    left_anticlock(cube,1);
+                }               
+                else
+                {
+                    up_clock(cube,1);
+                    front_clock(cube,1);
+                    up_anticlock(cube,1);
+                    front_anticlock(cube,1);
+                    up_anticlock(cube,1);
+                    left_anticlock(cube,1);
+                    up_clock(cube,1);
+                    left_clock(cube,1);
+                }
+            }
+            //中间色块在上面的32位置
+            else if (cube->up.s[3][2]!= cube->up.s[2][2] && cube->front.s[1][2] == cube->front.s[2][2])
+            {
+                if (cube->up.s[3][2]==cube->right.s[2][2])
+                {
+                    up_clock(cube,1);
+                    right_clock(cube,1);
+                    up_anticlock(cube,1);
+                    right_anticlock(cube,1);
+                    up_anticlock(cube,1);
+                    front_anticlock(cube,1);
+                    up_clock(cube,1);
+                    front_clock(cube,1);
+                }
+                else
+                {
+                    up_anticlock(cube,1);
+                    left_anticlock(cube,1);
+                    up_clock(cube,1);
+                    left_clock(cube,1);
+                    up_clock(cube,1);
+                    front_clock(cube,1);
+                    up_anticlock(cube,1);
+                    front_anticlock(cube,1);
+                }
+            }
+            //中间色块在上面的23位置
+            else if (cube->up.s[2][3]!= cube->up.s[2][2] && cube->right.s[1][2]== cube->right.s[2][2])
+            {
+                if (cube->up.s[2][3]== cube->front.s[2][2])
+                {
+                    up_anticlock(cube,1);
+                    front_anticlock(cube,1);
+                    up_clock(cube,1);
+                    front_clock(cube,1);
+                    up_clock(cube,1);
+                    right_clock(cube,1);
+                    up_anticlock(cube,1);
+                    right_anticlock(cube,1);
+                }
+                else
+                {
+                    up_clock(cube,1);
+                    back_clock(cube,1);
+                    up_anticlock(cube,1);
+                    back_anticlock(cube,1);
+                    up_anticlock(cube,1);
+                    right_anticlock(cube,1);
+                    up_clock(cube,1);
+                    right_clock(cube,1);
+                }
+            }
+            else
+                up_clock(cube,1);
+        }
+        //中间色块在中层的情况
+        else
+        {
+            if (cube->front.s[2][3]!= cube->front.s[2][2])
+            {
+                right_clock(cube,1);
+                up_anticlock(cube,1);
+                right_anticlock(cube,1);
+                up_anticlock(cube,1);
+                front_anticlock(cube,1);
+                up_clock(cube,1);
+                front_clock(cube,1);
+            }
+            else if (cube->right.s[2][3]!=cube->right.s[2][2])
+            {
+                back_clock(cube,1);
+                up_anticlock(cube,1);
+                back_anticlock(cube,1);
+                up_anticlock(cube,1);
+                right_anticlock(cube,1);
+                up_clock(cube,1);
+                right_clock(cube,1);
+            }
+            else if (cube->back.s[2][3]!= cube->back.s[2][2])
+            {
+                left_clock(cube,1);
+                up_anticlock(cube,1);
+                left_anticlock(cube,1);
+                up_anticlock(cube,1);
+                back_anticlock(cube,1);
+                up_clock(cube,1);
+                back_clock(cube,1);
+            }
+            else
+            {
+                front_clock(cube,1);
+                up_anticlock(cube,1);
+                front_anticlock(cube,1);
+                up_anticlock(cube,1);
+                left_anticlock(cube,1);
+                up_clock(cube,1);
+                left_clock(cube,1);
+            }
+        }
+    }
+}
+/*
+** drief: 顶面复原，只差四个角就完成复原了
+*/
+void cfop_oll( Cube *cube )
+{
+    while (!(cube->up.s[1][1] == cube->up.s[2][2] && cube->up.s[1][2] == cube->up.s[2][2] 
+            && cube->up.s[1][3] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+            && cube->up.s[2][3] == cube->up.s[2][2] && cube->up.s[3][1] == cube->up.s[2][2] 
+            && cube->up.s[3][2] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2]))
+    {
+            //OLL1
+            if (cube->back.s[1][2] == cube->up.s[2][2] && cube->right.s[1][3] == cube->up.s[2][2] 
+                && cube->right.s[1][2] == cube->up.s[2][2] && cube->right.s[1][1] == cube->up.s[2][2] 
+                && cube->front.s[1][2] == cube->up.s[2][2] && cube->left.s[1][1] == cube->up.s[2][2] 
+                && cube->left.s[1][2] == cube->up.s[2][2] && cube->left.s[1][3] == cube->up.s[2][2])
+            {
+                right_clock(cube,1);
+                up_clock(cube,2);
+                right_clock(cube,2);
+                front_clock(cube,1);
+                right_clock(cube,1);
+                front_anticlock(cube,1);
+                up_clock(cube,2);
+                right_anticlock(cube,1);
+                front_clock(cube,1);
+                right_clock(cube,1);
+                front_anticlock(cube,1);
+            }
+            //OLL2    
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->back.s[1][1] == cube->up.s[2][2] 
+                    && cube->right.s[1][2] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][3] == cube->up.s[2][2] && cube->left.s[1][1] == cube->up.s[2][2] 
+                    && cube->left.s[1][2] == cube->up.s[2][2] && cube->left.s[1][3] == cube->up.s[2][2])
+            {
+                front_clock(cube,1);
+                right_clock(cube,1);
+                up_clock(cube,1);
+                right_anticlock(cube,1);
+                up_anticlock(cube,1);
+                front_anticlock(cube,1);
+                back_clock(cube,1);
+                up_clock(cube,1);
+                left_clock(cube,1);
+                up_anticlock(cube,1);
+                left_anticlock(cube,1);
+                back_anticlock(cube,1);
+            }
+            //OLL3
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->back.s[1][2] == cube->up.s[2][2] 
+                    && cube->right.s[1][3] == cube->up.s[2][2] && cube->right.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][2] == cube->up.s[2][2] && cube->left.s[1][3] == cube->up.s[2][2] 
+                    && cube->left.s[1][2] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                back_clock(cube,1);
+                up_clock(cube,1);
+                left_clock(cube,1);
+                up_anticlock(cube,1);
+                left_anticlock(cube,1);
+                back_anticlock(cube,1);
+                up_anticlock(cube,1);
+                front_clock(cube,1);
+                right_clock(cube,1);
+                up_clock(cube,1);
+                right_anticlock(cube,1);
+                up_anticlock(cube,1);
+                front_anticlock(cube,1);
+            }
+            //OLL4
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->right.s[1][2] == cube->up.s[2][2] 
+                    && cube->right.s[1][1] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][1] == cube->up.s[2][2] && cube->left.s[1][1] == cube->up.s[2][2] 
+                    && cube->left.s[1][2] == cube->up.s[2][2] && cube->up.s[1][3] == cube->up.s[2][2])
+            {
+                back_clock(cube,1);
+                up_clock(cube,1);
+                left_clock(cube,1);
+                up_anticlock(cube,1);
+                left_anticlock(cube,1);
+                back_anticlock(cube,1);
+                right_clock(cube,1);
+                back_clock(cube,1);
+                up_clock(cube,1);
+                back_anticlock(cube,1);
+                up_anticlock(cube,1);
+                right_anticlock(cube,1);
+            }
+            //OLL5
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->right.s[1][3] == cube->up.s[2][2] 
+                    && cube->right.s[1][2] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][1] == cube->up.s[2][2] && cube->left.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][1] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                front_clock(cube,1);
+                up_clock(cube,1);
+                right_anticlock(cube,1);
+                up_anticlock(cube,1);
+                front_anticlock(cube,1);
+                up_clock(cube,1);
+                front_clock(cube,1);
+                right_clock(cube,2);
+                up_clock(cube,1);
+                right_anticlock(cube,1);
+                up_anticlock(cube,1);
+                front_anticlock(cube,1);
+            }
+            //OLL6
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->back.s[1][2] == cube->up.s[2][2] 
+                    && cube->back.s[1][1] == cube->up.s[2][2] && cube->right.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][2] == cube->up.s[2][2] && cube->left.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[3][1] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                front_clock(cube,1);
+                right_clock(cube,1);
+                up_clock(cube,1);
+                right_anticlock(cube,1);
+                up_clock(cube,1);
+                front_anticlock(cube,1);
+                up_clock(cube,2);
+                front_anticlock(cube,1);
+                left_clock(cube,1);
+                front_clock(cube,1);
+                left_anticlock(cube,1);
+            }
+            //OLL7
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->right.s[1][2] == cube->up.s[2][2] 
+                    && cube->right.s[1][1] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->left.s[1][3] == cube->up.s[2][2] && cube->left.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][1] == cube->up.s[2][2] && cube->up.s[1][3] == cube->up.s[2][2])
+            {
+                left_anticlock(cube,1);
+                right_clock(cube,1);
+                back_clock(cube,1);
+                right_clock(cube,1);
+                back_clock(cube,1);
+                right_anticlock(cube,1);
+                back_anticlock(cube,1);
+                left_clock(cube,1);
+                right_clock(cube,2);
+                front_clock(cube,1);
+                right_clock(cube,1);
+                front_anticlock(cube,1);
+            }
+            //OLL8
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->right.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][2] == cube->up.s[2][2] && cube->left.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][1] == cube->up.s[2][2] && cube->up.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[3][1] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                left_anticlock(cube,1);
+                right_clock(cube,1);
+                back_clock(cube,1);
+                right_clock(cube,1);
+                back_clock(cube,1);
+                right_anticlock(cube,1);
+                back_anticlock(cube,1);
+                left_clock(cube,2);
+                right_clock(cube,2);
+                front_clock(cube,1);
+                right_clock(cube,1);
+                front_anticlock(cube,1);
+                left_anticlock(cube,1);
+            }
+            //OLL9
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->right.s[1][3] == cube->up.s[2][2] 
+                    && cube->right.s[1][1] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->left.s[1][1] == cube->up.s[2][2] && cube->left.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[2][3] == cube->up.s[2][2])
+            {
+                front_clock(cube,1);
+                right_clock(cube,1);
+                up_clock(cube,1);
+                right_anticlock(cube,1);
+                up_anticlock(cube,1);
+                right_clock(cube,1);
+                front_anticlock(cube,1);
+                left_clock(cube,1);
+                front_clock(cube,1);
+                right_anticlock(cube,1);
+                front_anticlock(cube,1);
+                left_anticlock(cube,1);
+            }
+            //OLL10
+            else if (cube->right.s[1][3] == cube->up.s[2][2] && cube->right.s[1][2] == cube->up.s[2][2] 
+                    && cube->right.s[1][1] == cube->up.s[2][2] && cube->left.s[1][1] == cube->up.s[2][2] 
+                    && cube->left.s[1][2] == cube->up.s[2][2] && cube->left.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[3][2] == cube->up.s[2][2])
+            {
+                right_clock(cube,1);
+                up_clock(cube,2);
+                right_clock(cube,2);
+                up_anticlock(cube,1);
+                right_clock(cube,1);
+                up_anticlock(cube,1);
+                right_anticlock(cube,1);
+                up_clock(cube,2);
+                front_clock(cube,1);
+                right_clock(cube,1);
+                front_anticlock(cube,1);
+            }
+            //OLL11
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->back.s[1][2] == cube->up.s[2][2] 
+                    && cube->right.s[1][3] == cube->up.s[2][2] && cube->right.s[1][1] == cube->up.s[2][2] 
+                    && cube->front.s[1][2] == cube->up.s[2][2] && cube->front.s[1][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[2][3] == cube->up.s[2][2])
+            {
+                front_clock(cube,1);
+                up_clock(cube,1);
+                right_clock(cube,1);
+                up_anticlock(cube,1);
+                right_anticlock(cube,1);
+                up_clock(cube,1);
+                right_clock(cube,1);
+                up_anticlock(cube,1);
+                right_anticlock(cube,1);
+                front_anticlock(cube,1);
+            }
+            //OLL12
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->right.s[1][3] == cube->up.s[2][2] 
+                    && cube->right.s[1][2] == cube->up.s[2][2] && cube->right.s[1][1] == cube->up.s[2][2] 
+                    && cube->front.s[1][1] == cube->up.s[2][2] && cube->left.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[3][2] == cube->up.s[2][2])
+            {
+                right_anticlock(cube,1);
+                up_anticlock(cube,1);
+                right_clock(cube,1);
+                up_anticlock(cube,1);
+                right_anticlock(cube,1);
+                up_clock(cube,1);
+                front_anticlock(cube,1);
+                up_clock(cube,1);
+                front_clock(cube,1);
+                back_clock(cube,1);
+            }
+            //OLL13
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->back.s[1][1] == cube->up.s[2][2] 
+                    && cube->right.s[1][2] == cube->up.s[2][2] && cube->front.s[1][1] == cube->up.s[2][2] 
+                    && cube->front.s[1][2] == cube->up.s[2][2] && cube->front.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2])
+            {
+                left_clock(cube,1);
+                front_clock(cube,2);
+                right_anticlock(cube,1);
+                front_anticlock(cube,1);
+                right_clock(cube,1);
+                front_clock(cube,1);
+                right_anticlock(cube,1);
+                front_anticlock(cube,1);
+                right_clock(cube,1);
+                front_anticlock(cube,1);
+                left_anticlock(cube,1);
+            }
+            //OLL14
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->back.s[1][2] == cube->up.s[2][2] 
+                    && cube->back.s[1][1] == cube->up.s[2][2] && cube->right.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][1] == cube->up.s[2][2] && cube->front.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[3][2] == cube->up.s[2][2])
+            {
+                left_anticlock(cube,1);
+                back_clock(cube,2);
+                right_clock(cube,1);
+                back_clock(cube,1);
+                right_anticlock(cube,1);
+                back_anticlock(cube,1);
+                right_clock(cube,1);
+                back_clock(cube,1);
+                right_anticlock(cube,1);
+                back_clock(cube,1);
+                left_clock(cube,1);
+            }
+            //OLL15
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->back.s[1][2] == cube->up.s[2][2] 
+                    && cube->right.s[1][3] == cube->up.s[2][2] && cube->right.s[1][2] == cube->up.s[2][2] 
+                    && cube->right.s[1][1] == cube->up.s[2][2] && cube->front.s[1][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[3][2] == cube->up.s[2][2])
+            {
+                right_clock(cube,1);
+                back_anticlock(cube,1);
+                right_clock(cube,2);
+                front_clock(cube,1);
+                right_clock(cube,2);
+                back_clock(cube,1);
+                right_clock(cube,2);
+                front_anticlock(cube,1);
+                right_clock(cube,1);
+            }
+            //OLL16
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->right.s[1][3] == cube->up.s[2][2] 
+                    && cube->right.s[1][2] == cube->up.s[2][2] && cube->right.s[1][1] == cube->up.s[2][2] 
+                    && cube->front.s[1][2] == cube->up.s[2][2] && cube->front.s[1][1] == cube->up.s[2][2] 
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2])
+            {
+                right_anticlock(cube,1);
+                front_clock(cube,1);
+                right_clock(cube,2);
+                back_anticlock(cube,1);
+                right_clock(cube,2);
+                front_anticlock(cube,1);
+                right_clock(cube,2);
+                back_clock(cube,1);
+                right_anticlock(cube,1);
+            }
+            //OLL17
+            else if (cube->back.s[1][1] == cube->up.s[2][2] && cube->right.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][2] == cube->up.s[2][2] && cube->front.s[1][3] == cube->up.s[2][2] 
+                    && cube->left.s[1][1] == cube->up.s[2][2] && cube->left.s[1][3] == cube->up.s[2][2]
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2])
+            {
+                front_clock(cube,1);
+                right_clock(cube,1);
+                up_clock(cube,1);
+                right_anticlock(cube,1);
+                up_anticlock(cube,1);
+                right_clock(cube,1);
+                up_clock(cube,1);
+                right_anticlock(cube,1);
+                up_anticlock(cube,1);
+                front_anticlock(cube,1);
+            }
+            //OLL18
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->back.s[1][1] == cube->up.s[2][2] 
+                    && cube->right.s[1][2] == cube->up.s[2][2] && cube->front.s[1][3] == cube->up.s[2][2] 
+                    && cube->left.s[1][1] == cube->up.s[2][2] && cube->left.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[3][2] == cube->up.s[2][2])
+            {
+                back_anticlock(cube,1);
+                right_anticlock(cube,1);
+                up_anticlock(cube,1);
+                right_clock(cube,1);
+                up_clock(cube,1);
+                right_anticlock(cube,1);
+                up_anticlock(cube,1);
+                right_clock(cube,1);
+                up_clock(cube,1);
+                back_clock(cube,1);
+            }
+            //OLL19
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->right.s[1][3] == cube->up.s[2][2] 
+                    && cube->right.s[1][2] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][3] == cube->up.s[2][2] && cube->up.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[3][1] == cube->up.s[2][2])
+            {
+                left_clock(cube,1);
+                front_clock(cube,1);
+                right_anticlock(cube,1);
+                front_clock(cube,1);
+                right_clock(cube,1);
+                front_clock(cube,2);
+                left_anticlock(cube,1);
+            }
+            //OLL20
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->back.s[1][1] == cube->up.s[2][2] 
+                    && cube->right.s[1][2] == cube->up.s[2][2] && cube->right.s[1][1] == cube->up.s[2][2] 
+                    && cube->front.s[1][1] == cube->up.s[2][2] && cube->up.s[1][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[3][2] == cube->up.s[2][2])
+            {
+                left_anticlock(cube,1);
+                back_anticlock(cube,1);
+                right_clock(cube,1);
+                back_anticlock(cube,1);
+                right_anticlock(cube,1);
+                back_clock(cube,2);
+                left_clock(cube,1);
+            }
+            //OLL21
+            else if (cube->back.s[1][1] == cube->up.s[2][2] && cube->right.s[1][1] == cube->up.s[2][2] 
+                    && cube->front.s[1][2] == cube->up.s[2][2] && cube->front.s[1][1] == cube->up.s[2][2] 
+                    && cube->left.s[1][2] == cube->up.s[2][2] && cube->up.s[1][1] == cube->up.s[2][2] 
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[2][3] == cube->up.s[2][2])
+            {
+                left_clock(cube, 1);
+                right_clock(cube, 2);
+                front_anticlock(cube, 1);
+                right_clock(cube, 1);
+                front_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                front_clock(cube, 2);
+                right_clock(cube, 1);
+                front_anticlock(cube, 1);
+                right_clock(cube, 1);
+                left_anticlock(cube, 1);
+            }
+            //OLL22
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->back.s[1][2] == cube->up.s[2][2] 
+                && cube->right.s[1][3] == cube->up.s[2][2] && cube->front.s[1][3] == cube->up.s[2][2] 
+                && cube->left.s[1][2] == cube->up.s[2][2] && cube->up.s[2][3] == cube->up.s[2][2]
+                && cube->up.s[3][1] == cube->up.s[2][2] && cube->up.s[3][2] == cube->up.s[2][2])
+            {
+                left_anticlock(cube, 1);
+                right_clock(cube, 2);
+                back_clock(cube, 1);
+                right_anticlock(cube, 1);
+                back_clock(cube, 1);
+                right_clock(cube, 1);
+                back_clock(cube, 2);
+                right_anticlock(cube, 1);
+                back_clock(cube, 1);
+                left_clock(cube, 1);
+                right_anticlock(cube, 1);
+            }
+            //OLL23
+            else if (cube->back.s[1][1] == cube->up.s[2][2] && cube->right.s[1][2] == cube->up.s[2][2] 
+                && cube->front.s[1][2] == cube->up.s[2][2] && cube->front.s[1][1] == cube->up.s[2][2] 
+                && cube->left.s[1][1] == cube->up.s[2][2] && cube->up.s[1][2] == cube->up.s[2][2] 
+                && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_clock(cube, 1);
+                front_clock(cube, 1);
+                right_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+                up_clock(cube, 1);
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+                front_anticlock(cube, 1);
+            }
+            //OLL24
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->back.s[1][2] == cube->up.s[2][2] 
+                    && cube->right.s[1][2] == cube->up.s[2][2] && cube->front.s[1][3] == cube->up.s[2][2] 
+                    && cube->left.s[1][3] == cube->up.s[2][2] && cube->up.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[3][2] == cube->up.s[2][2])
+            {
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+                front_anticlock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 2);
+                right_anticlock(cube, 1);
+            }
+            //OLL25
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->back.s[1][2] == cube->up.s[2][2] 
+                    && cube->right.s[1][3] == cube->up.s[2][2] && cube->left.s[1][3] == cube->up.s[2][2] 
+                    && cube->left.s[1][2] == cube->up.s[2][2] && cube->up.s[2][3] == cube->up.s[2][2] 
+                    && cube->up.s[3][2] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                left_anticlock(cube, 1);
+                back_clock(cube, 2);
+                right_clock(cube, 1);
+                back_clock(cube, 1);
+                right_anticlock(cube, 1);
+                back_clock(cube, 1);
+                left_clock(cube, 1);
+            }
+            //OLL26
+            else if (cube->right.s[1][1] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][1] == cube->up.s[2][2] && cube->left.s[1][1] == cube->up.s[2][2] 
+                    && cube->left.s[1][2] == cube->up.s[2][2] && cube->up.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[2][3] == cube->up.s[2][2])
+            {
+                left_clock(cube, 1);
+                front_clock(cube, 2);
+                right_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+                right_clock(cube, 1);
+                front_anticlock(cube, 1);
+                left_anticlock(cube, 1);
+            }
+            //OLL27
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->back.s[1][2] == cube->up.s[2][2] 
+                    && cube->right.s[1][3] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][3] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][3] == cube->up.s[2][2] && cube->up.s[3][1] == cube->up.s[2][2])
+            {
+                left_clock(cube, 1);
+                front_anticlock(cube, 1);
+                left_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                left_clock(cube, 1);
+                front_clock(cube, 1);
+                left_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+                up_clock(cube, 1);
+                front_clock(cube, 1);
+            }
+            //OLL28
+            else if (cube->back.s[1][1] == cube->up.s[2][2] && cube->back.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][2] == cube->up.s[2][2] && cube->front.s[1][1] == cube->up.s[2][2] 
+                    && cube->left.s[1][1] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][3] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                right_anticlock(cube, 1);
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+                right_clock(cube, 1);
+                front_clock(cube, 1);
+                up_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+            }
+            //OLL29
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->right.s[1][1] == cube->up.s[2][2] 
+                    && cube->front.s[1][2] == cube->up.s[2][2] && cube->front.s[1][1] == cube->up.s[2][2] 
+                    && cube->left.s[1][1] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][3] == cube->up.s[2][2] && cube->up.s[1][3] == cube->up.s[2][2])
+            {
+                left_clock(cube, 1);
+                front_clock(cube, 1);
+                left_anticlock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                left_clock(cube, 1);
+                front_anticlock(cube, 1);
+                left_anticlock(cube, 1);
+            }
+            //OLL30
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->right.s[1][3] == cube->up.s[2][2] 
+                    && cube->front.s[1][2] == cube->up.s[2][2] && cube->front.s[1][3] == cube->up.s[2][2] 
+                    && cube->left.s[1][3] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][3] == cube->up.s[2][2] && cube->up.s[1][1] == cube->up.s[2][2])
+            {
+                right_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+                right_clock(cube, 1);
+                left_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                left_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+            }
+            //OLL31
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->back.s[1][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[2][3] == cube->up.s[2][2] 
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[3][1] == cube->up.s[2][2] 
+                    && cube->up.s[3][2] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                right_anticlock(cube, 1);
+                up_clock(cube, 2);
+                right_clock(cube, 1);
+                front_clock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                front_anticlock(cube, 1);
+            }
+            //OLL32
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->front.s[1][1] == cube->up.s[2][2] 
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[2][3] == cube->up.s[2][2] 
+                    && cube->up.s[3][2] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                left_clock(cube, 1);
+                front_clock(cube, 1);
+                right_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+                left_anticlock(cube, 1);
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+                front_anticlock(cube, 1);
+            }
+            //OLL33
+            else if (cube->front.s[1][3] == cube->up.s[2][2] && cube->left.s[1][1] == cube->up.s[2][2] 
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[2][3] == cube->up.s[2][2] 
+                    && cube->up.s[3][1] == cube->up.s[2][2] && cube->up.s[3][2] == cube->up.s[2][2])
+            {
+                front_anticlock(cube, 1);
+                left_clock(cube, 1);
+                front_clock(cube, 1);
+                right_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+                left_anticlock(cube, 1);
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+            }
+            //OLL34
+            else if (cube->right.s[1][1] == cube->up.s[2][2] && cube->front.s[1][1] == cube->up.s[2][2] 
+                    && cube->left.s[1][1] == cube->up.s[2][2] && cube->up.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][3] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][3] == cube->up.s[2][2] && cube->up.s[3][2] == cube->up.s[2][2])
+            {
+                right_clock(cube, 1);
+                up_clock(cube, 2);
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_clock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+            }
+            //OLL35
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->right.s[1][3] == cube->up.s[2][2] 
+                    && cube->front.s[1][3] == cube->up.s[2][2] && cube->up.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[3][1] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][3] == cube->up.s[2][2] && cube->up.s[3][2] == cube->up.s[2][2])
+            {
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                up_clock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 2);
+                right_anticlock(cube, 1);
+            }
+            //OLL36
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->back.s[1][1] == cube->up.s[2][2] 
+                    && cube->front.s[1][1] == cube->up.s[2][2] && cube->front.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][3] == cube->up.s[2][2] && cube->up.s[3][2] == cube->up.s[2][2])
+            {
+                right_clock(cube, 1);
+                up_clock(cube, 2);
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_clock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+            }
+            //OLL37
+            else if (cube->back.s[1][1] == cube->up.s[2][2] && cube->front.s[1][3] == cube->up.s[2][2] 
+                    && cube->left.s[1][1] == cube->up.s[2][2] && cube->left.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][3] == cube->up.s[2][2] && cube->up.s[3][2] == cube->up.s[2][2])
+            {
+                right_clock(cube, 1);
+                up_clock(cube, 2);
+                right_clock(cube, 2);
+                up_anticlock(cube, 1);
+                right_clock(cube, 2);
+                up_anticlock(cube, 1);
+                right_clock(cube, 2);
+                up_anticlock(cube, 2);
+                right_clock(cube, 1);
+            }
+            //OLL38
+            else if (cube->right.s[1][3] == cube->up.s[2][2] && cube->right.s[1][2] == cube->up.s[2][2] 
+                    && cube->right.s[1][1] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[1][1] == cube->up.s[2][2] && cube->up.s[3][1] == cube->up.s[2][2])
+            {
+                front_clock(cube, 1);
+                up_clock(cube, 1);
+                right_clock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+            }
+            //OLL39
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->right.s[1][3] == cube->up.s[2][2] 
+                    && cube->right.s[1][2] == cube->up.s[2][2] && cube->right.s[1][1] == cube->up.s[2][2] 
+                    && cube->up.s[3][2] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[1][1] == cube->up.s[2][2] && cube->up.s[3][1] == cube->up.s[2][2])
+            {
+                back_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                up_clock(cube, 1);
+                right_clock(cube, 1);
+                back_clock(cube, 1);
+            }
+            //OLL40
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->right.s[1][3] == cube->up.s[2][2] 
+                    && cube->front.s[1][1] == cube->up.s[2][2] && cube->left.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][1] == cube->up.s[2][2] && cube->up.s[2][3] == cube->up.s[2][2] 
+                    && cube->up.s[3][2] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                right_clock(cube, 1);
+                up_anticlock(cube, 2);
+                right_clock(cube, 2);
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+                front_anticlock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 2);
+                right_anticlock(cube, 1);
+            }
+            //OLL41
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->left.s[1][1] == cube->up.s[2][2] && cube->left.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[1][3] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][3] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+            }
+            //OLL42
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->back.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][1] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][3] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][3] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+                front_anticlock(cube, 1);
+            }
+            //OLL43
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][3] == cube->up.s[2][2] && cube->left.s[1][1] == cube->up.s[2][2] 
+                    && cube->up.s[1][3] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][3] == cube->up.s[2][2] && cube->up.s[3][1] == cube->up.s[2][2])
+            {
+                right_clock(cube, 1);
+                back_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                back_clock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+            }
+            //OLL44
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->back.s[1][1] == cube->up.s[2][2] 
+                    && cube->front.s[1][2] == cube->up.s[2][2] && cube->left.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[1][1] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][3] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                right_anticlock(cube, 1);
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+                up_clock(cube, 1);
+                right_clock(cube, 1);
+            }
+            //OLL45
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->right.s[1][1] == cube->up.s[2][2] 
+                    && cube->front.s[1][2] == cube->up.s[2][2] && cube->left.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[1][1] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[2][3] == cube->up.s[2][2] && cube->up.s[1][3] == cube->up.s[2][2])
+            {
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+                back_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+                back_clock(cube, 1);
+            }
+            //OLL46
+            else if (cube->right.s[1][3] == cube->up.s[2][2] && cube->right.s[1][2] == cube->up.s[2][2] 
+                    && cube->right.s[1][1] == cube->up.s[2][2] && cube->left.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][1] == cube->up.s[2][2] && cube->up.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[3][1] == cube->up.s[2][2] && cube->up.s[3][2] == cube->up.s[2][2])
+            {
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+                front_anticlock(cube, 1);
+                up_clock(cube, 1);
+                right_clock(cube, 1);
+            }
+            //OLL47
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->right.s[1][2] == cube->up.s[2][2] 
+                    && cube->right.s[1][1] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[3][1] == cube->up.s[2][2])
+            {
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                up_clock(cube, 1);
+                right_clock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+                front_anticlock(cube, 1);
+            }
+            //OLL48
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->right.s[1][3] == cube->up.s[2][2] 
+                    && cube->right.s[1][2] == cube->up.s[2][2] && cube->front.s[1][1] == cube->up.s[2][2] 
+                    && cube->up.s[1][1] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[3][2] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_clock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                up_clock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_clock(cube, 1);
+                back_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                back_clock(cube, 1);
+            }
+            //OLL49
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->front.s[1][1] == cube->up.s[2][2] 
+                    && cube->front.s[1][2] == cube->up.s[2][2] && cube->left.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[2][3] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                front_clock(cube, 1);
+                up_clock(cube, 1);
+                right_clock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+                right_clock(cube, 1);
+            }
+            //OLL50
+            else if (cube->right.s[1][3] == cube->up.s[2][2] && cube->right.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][1] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][1] == cube->up.s[2][2] && cube->up.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+            }
+            //OLL51
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->back.s[1][1] == cube->up.s[2][2] 
+                    && cube->right.s[1][2] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[3][1] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                up_clock(cube, 1);
+                right_clock(cube, 1);
+                up_anticlock(cube, 2);
+                right_anticlock(cube, 1);
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+            }
+            //OLL52
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->right.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][1] == cube->up.s[2][2] && cube->front.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[1][1] == cube->up.s[2][2] && cube->up.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[3][2] == cube->up.s[2][2])
+            {
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                up_clock(cube, 1);
+                right_clock(cube, 1);
+                up_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+            }
+            //OLL53
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->right.s[1][1] == cube->up.s[2][2] 
+                    && cube->left.s[1][2] == cube->up.s[2][2] && cube->left.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[1][1] == cube->up.s[2][2] && cube->up.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[2][3] == cube->up.s[2][2] && cube->up.s[3][2] == cube->up.s[2][2])
+            {
+                right_clock(cube, 2);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                back_anticlock(cube, 1);
+                right_clock(cube, 1);
+                up_anticlock(cube, 1);
+                right_clock(cube, 2);
+                up_clock(cube, 1);
+                right_clock(cube, 1);
+                back_clock(cube, 1);
+                right_anticlock(cube, 1);
+            }
+            //OLL54
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->right.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][1] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][2] == cube->up.s[2][2] && cube->up.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_clock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+            }
+            //OLL55
+            else if (cube->back.s[1][3] == cube->up.s[2][2] && cube->back.s[1][2] == cube->up.s[2][2] 
+                    && cube->front.s[1][1] == cube->up.s[2][2] && cube->left.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][3] == cube->up.s[2][2] && cube->up.s[2][3] == cube->up.s[2][2] 
+                    && cube->up.s[3][2] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                back_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+                up_clock(cube, 1);
+                right_clock(cube, 1);
+                back_clock(cube, 1);
+                right_anticlock(cube, 1);
+            }
+            //OLL56
+            else if (cube->right.s[1][2] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][1] == cube->up.s[2][2] && cube->up.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][3] == cube->up.s[2][2] && cube->up.s[2][1] == cube->up.s[2][2] 
+                    && cube->up.s[3][1] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                left_clock(cube, 1);
+                front_clock(cube, 1);
+                right_anticlock(cube, 1);
+                front_anticlock(cube, 1);
+                left_anticlock(cube, 1);
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_clock(cube, 1);
+                up_anticlock(cube, 1);
+                right_anticlock(cube, 1);
+            }
+            //OLL57
+            else if (cube->back.s[1][2] == cube->up.s[2][2] && cube->front.s[1][2] == cube->up.s[2][2] 
+                    && cube->up.s[1][1] == cube->up.s[2][2] && cube->up.s[1][3] == cube->up.s[2][2] 
+                    && cube->up.s[2][1] == cube->up.s[2][2] && cube->up.s[2][3] == cube->up.s[2][2] 
+                    && cube->up.s[3][1] == cube->up.s[2][2] && cube->up.s[3][3] == cube->up.s[2][2])
+            {
+                right_clock(cube, 1);
+                up_clock(cube, 1);
+                right_anticlock(cube, 1);
+                up_anticlock(cube, 1);
+                left_clock(cube, 1);
+                right_anticlock(cube, 1);
+                front_clock(cube, 1);
+                right_clock(cube, 1);
+                front_anticlock(cube, 1);
+                left_anticlock(cube, 1);
+            }
+            else
+                up_clock(cube, 1);
+    }
+}
+/*
+** brief:PLL顶层,排列调整21种情况
+*/
+void cfop_pll( Cube *cube )
+{
+    int flag_pll = 0;
+    while (!(cube->front.s[1][1] == cube->front.s[2][2] && cube->front.s[1][2] == cube->front.s[2][2] 
+        && cube->front.s[1][3] == cube->front.s[2][2] && cube->right.s[1][3] == cube->right.s[2][2] 
+        && cube->right.s[1][2] == cube->right.s[2][2] && cube->right.s[1][1] == cube->right.s[2][2] 
+        && cube->back.s[1][3] == cube->back.s[2][2] && cube->back.s[1][2] == cube->back.s[2][2] 
+        && cube->back.s[1][1] == cube->back.s[2][2] && cube->left.s[1][1] == cube->left.s[2][2] 
+        && cube->left.s[1][2] == cube->left.s[2][2] && cube->left.s[1][3] == cube->left.s[2][2]))
+    {
+
+        //PLL1
+        if (cube->back.s[1][3] == cube->back.s[2][2] && cube->back.s[1][2] == cube->back.s[2][2] 
+            && cube->back.s[1][1] == cube->back.s[2][2] && cube->right.s[1][3] == cube->right.s[2][2] 
+            && cube->right.s[1][2] == cube->left.s[2][2] && cube->right.s[1][1] == cube->right.s[2][2] 
+            && cube->front.s[1][1] == cube->front.s[2][2] && cube->front.s[1][2] == cube->right.s[2][2] 
+            && cube->front.s[1][3] == cube->front.s[2][2] && cube->left.s[1][1] == cube->left.s[2][2] 
+            && cube->left.s[1][2] == cube->front.s[2][2] && cube->left.s[1][3] == cube->left.s[2][2])
+        {
+            right_clock(cube, 1);
+            up_anticlock(cube, 1);
+            right_clock(cube, 1);
+            up_clock(cube, 1);
+            right_clock(cube, 1);
+            up_clock(cube, 1);
+            right_clock(cube, 1);
+            up_anticlock(cube, 1);
+            right_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+            right_clock(cube, 2);
+        }
+        //PLL2
+        else if (cube->back.s[1][3] == cube->back.s[2][2] && cube->back.s[1][2] == cube->back.s[2][2]
+            && cube->back.s[1][1] == cube->back.s[2][2] && cube->right.s[1][3] == cube->right.s[2][2]
+            && cube->right.s[1][2] == cube->front.s[2][2] && cube->right.s[1][1] == cube->right.s[2][2]
+            && cube->front.s[1][1] == cube->front.s[2][2] && cube->front.s[1][2] == cube->left.s[2][2]
+            && cube->front.s[1][3] == cube->front.s[2][2] && cube->left.s[1][1] == cube->left.s[2][2]
+            && cube->left.s[1][2] == cube->right.s[2][2] && cube->left.s[1][3] == cube->left.s[2][2])
+        {
+            right_clock(cube, 2);
+            up_clock(cube, 1);
+            right_clock(cube, 1);
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+            right_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+            right_anticlock(cube, 1);
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+        }
+        //PLL3
+        else if (cube->back.s[1][3] == cube->back.s[2][2] && cube->back.s[1][1] == cube->back.s[2][2] 
+            && cube->right.s[1][3] == cube->right.s[2][2] && cube->right.s[1][1] == cube->right.s[2][2] 
+            && cube->front.s[1][1] == cube->front.s[2][2] && cube->front.s[1][3] == cube->front.s[2][2] 
+            && cube->left.s[1][1] == cube->left.s[2][2] && cube->left.s[1][3] == cube->left.s[2][2] 
+            && cube->right.s[1][2] == cube->left.s[2][2] && cube->front.s[1][2] == cube->back.s[2][2] 
+            && cube->left.s[1][2] == cube->right.s[2][2] && cube->back.s[1][2] == cube->front.s[2][2])
+        {
+            right_clock(cube, 2);
+            left_clock(cube, 2);
+            down_clock(cube, 1);
+            right_clock(cube, 2);
+            left_clock(cube, 2);
+            down_clock(cube, 2);
+            right_clock(cube, 2);
+            left_clock(cube, 2);
+            down_clock(cube, 1);
+            right_clock(cube, 2);
+            left_clock(cube, 2);
+        }
+        //PLL4
+        else if (cube->back.s[1][3] == cube->back.s[2][2] && cube->back.s[1][1] == cube->back.s[2][2] 
+            && cube->right.s[1][3] == cube->right.s[2][2] && cube->right.s[1][1] == cube->right.s[2][2] 
+            && cube->front.s[1][1] == cube->front.s[2][2] && cube->front.s[1][3] == cube->front.s[2][2] 
+            && cube->left.s[1][1] == cube->left.s[2][2] && cube->left.s[1][3] == cube->left.s[2][2] 
+            && cube->right.s[1][2] == cube->front.s[2][2] && cube->front.s[1][2] == cube->right.s[2][2] 
+            && cube->left.s[1][2] == cube->back.s[2][2] && cube->back.s[1][2] == cube->left.s[2][2])
+        {
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+            right_clock(cube, 1);
+            up_anticlock(cube, 1);
+            right_clock(cube, 1);
+            up_clock(cube, 1);
+            right_clock(cube, 1);
+            up_anticlock(cube, 1);
+            right_clock(cube, 1);
+            up_clock(cube, 1);
+            right_clock(cube, 1);
+            up_clock(cube, 1);
+            right_clock(cube, 2);
+            up_anticlock(cube, 1);
+            right_anticlock(cube, 1);
+            up_clock(cube, 1);
+        }
+        //PLL5
+        else if (cube->back.s[1][3] == cube->back.s[2][2] && cube->back.s[1][2] == cube->back.s[2][2] 
+            && cube->back.s[1][1] == cube->right.s[2][2] && cube->right.s[1][3] == cube->front.s[2][2] 
+            && cube->right.s[1][2] == cube->right.s[2][2] && cube->right.s[1][1] == cube->front.s[2][2] 
+            && cube->front.s[1][1] == cube->back.s[2][2] && cube->front.s[1][2] == cube->front.s[2][2] 
+            && cube->front.s[1][3] == cube->left.s[2][2] && cube->left.s[1][1] == cube->left.s[2][2] 
+            && cube->left.s[1][2] == cube->left.s[2][2] && cube->left.s[1][3] == cube->right.s[2][2])
+        {
+            right_clock(cube, 2);
+            front_clock(cube, 2);
+            right_anticlock(cube, 1);
+            back_anticlock(cube, 1);
+            right_clock(cube, 1);
+            front_clock(cube, 2);
+            right_anticlock(cube, 1);
+            back_clock(cube, 1);
+            right_anticlock(cube, 1);
+        }
+        //PLL6
+        else if (cube->back.s[1][3] == cube->back.s[2][2] && cube->back.s[1][2] == cube->back.s[2][2] 
+            && cube->back.s[1][1] == cube->front.s[2][2] && cube->right.s[1][3] == cube->left.s[2][2] 
+            && cube->right.s[1][2] == cube->right.s[2][2] && cube->right.s[1][1] == cube->back.s[2][2] 
+            && cube->front.s[1][1] == cube->right.s[2][2] && cube->front.s[1][2] == cube->front.s[2][2] 
+            && cube->front.s[1][3] == cube->right.s[2][2] && cube->left.s[1][1] == cube->left.s[2][2] 
+            && cube->left.s[1][2] == cube->left.s[2][2] && cube->left.s[1][3] == cube->front.s[2][2])
+        {
+            right_clock(cube, 1);
+            back_anticlock(cube, 1);
+            right_clock(cube, 1);
+            front_clock(cube, 2);
+            right_anticlock(cube, 1);
+            back_clock(cube, 1);
+            right_clock(cube, 1);
+            front_clock(cube, 2);
+            right_clock(cube, 2);
+        }
+        //PLL7
+        else if (cube->back.s[1][3] == cube->left.s[2][2] && cube->back.s[1][2] == cube->back.s[2][2] 
+            && cube->back.s[1][1] == cube->right.s[2][2] && cube->right.s[1][3] == cube->front.s[2][2] 
+            && cube->right.s[1][2] == cube->right.s[2][2] && cube->right.s[1][1] == cube->back.s[2][2] 
+            && cube->front.s[1][1] == cube->left.s[2][2] && cube->front.s[1][2] == cube->front.s[2][2] 
+            && cube->front.s[1][3] == cube->right.s[2][2] && cube->left.s[1][1] == cube->front.s[2][2] 
+            && cube->left.s[1][2] == cube->left.s[2][2] && cube->left.s[1][3] == cube->back.s[2][2])
+        {
+            right_clock(cube, 1);
+            back_anticlock(cube, 1);
+            right_anticlock(cube, 1);
+            front_clock(cube, 1);
+            right_clock(cube, 1);
+            back_clock(cube, 1);
+            right_anticlock(cube, 1);
+            front_clock(cube, 2);
+            left_anticlock(cube, 1);
+            back_clock(cube, 1);
+            left_clock(cube, 1);
+            front_clock(cube, 1);
+            left_anticlock(cube, 1);
+            back_anticlock(cube, 1);
+            left_clock(cube, 1);
+        }
+        //PLL8
+        else if (cube->back.s[1][3] == cube->back.s[2][2] && cube->back.s[1][2] == cube->back.s[2][2] 
+            && cube->back.s[1][1] == cube->right.s[2][2] && cube->right.s[1][3] == cube->front.s[2][2] 
+            && cube->right.s[1][2] == cube->left.s[2][2] && cube->right.s[1][1] == cube->back.s[2][2] 
+            && cube->front.s[1][1] == cube->front.s[2][2] && cube->front.s[1][2] == cube->front.s[2][2] 
+            && cube->front.s[1][3] == cube->right.s[2][2] && cube->left.s[1][1] == cube->left.s[2][2] 
+            && cube->left.s[1][2] == cube->right.s[2][2] && cube->left.s[1][3] == cube->left.s[2][2])
+        {
+            right_clock(cube, 1);
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+            right_anticlock(cube, 1);
+            front_clock(cube, 1);
+            right_clock(cube, 2);
+            up_anticlock(cube, 1);
+            right_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+            right_clock(cube, 1);
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+            front_anticlock(cube, 1);
+        }
+        //PLL9
+        else if (cube->back.s[1][3] == cube->back.s[2][2] && cube->back.s[1][2] == cube->front.s[2][2] 
+            && cube->back.s[1][1] == cube->right.s[2][2] && cube->right.s[1][3] == cube->front.s[2][2] 
+            && cube->right.s[1][2] == cube->right.s[2][2] && cube->right.s[1][1] == cube->back.s[2][2] 
+            && cube->front.s[1][1] == cube->front.s[2][2] && cube->front.s[1][2] == cube->back.s[2][2] 
+            && cube->front.s[1][3] == cube->right.s[2][2] && cube->left.s[1][1] == cube->left.s[2][2] 
+            && cube->left.s[1][2] == cube->left.s[2][2] && cube->left.s[1][3] == cube->left.s[2][2])
+        {
+            up_anticlock(cube, 1);
+            right_anticlock(cube, 1);
+            up_clock(cube, 1);
+            right_clock(cube, 1);
+            up_anticlock(cube, 1);
+            right_clock(cube, 2);
+            front_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+            front_clock(cube, 1);
+            up_clock(cube, 1);
+            right_clock(cube, 1);
+            front_clock(cube, 1);
+            right_anticlock(cube, 1);
+            front_anticlock(cube, 1);
+            right_clock(cube, 2);
+        }
+        //PLL10
+        else if (cube->back.s[1][3] == cube->front.s[2][2] && cube->back.s[1][2] == cube->right.s[2][2] 
+            && cube->back.s[1][1] == cube->back.s[2][2] && cube->right.s[1][3] == cube->right.s[2][2] 
+            && cube->right.s[1][2] == cube->back.s[2][2] && cube->right.s[1][1] == cube->left.s[2][2] 
+            && cube->front.s[1][1] == cube->front.s[2][2] && cube->front.s[1][2] == cube->front.s[2][2] 
+            && cube->front.s[1][3] == cube->back.s[2][2] && cube->left.s[1][1] == cube->right.s[2][2] 
+            && cube->left.s[1][2] == cube->left.s[2][2] && cube->left.s[1][3] == cube->left.s[2][2])
+        {
+            right_anticlock(cube, 1);
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+            back_anticlock(cube, 1);
+            down_clock(cube, 1);
+            back_anticlock(cube, 1);
+            down_anticlock(cube, 1);
+            back_clock(cube, 2);
+            right_anticlock(cube, 1);
+            back_anticlock(cube, 1);
+            right_clock(cube, 1);
+            back_clock(cube, 1);
+            right_clock(cube, 1);
+        }
+        //PLL11
+        else if (cube->back.s[1][3] == cube->front.s[2][2] && cube->back.s[1][2] == cube->left.s[2][2] 
+            && cube->back.s[1][1] == cube->back.s[2][2] && cube->right.s[1][3] == cube->right.s[2][2] 
+            && cube->right.s[1][2] == cube->right.s[2][2] && cube->right.s[1][1] == cube->left.s[2][2] 
+            && cube->front.s[1][1] == cube->front.s[2][2] && cube->front.s[1][2] == cube->front.s[2][2] 
+            && cube->front.s[1][3] == cube->back.s[2][2] && cube->left.s[1][1] == cube->right.s[2][2] 
+            && cube->left.s[1][2] == cube->back.s[2][2] && cube->left.s[1][3] == cube->left.s[2][2])
+        {
+            front_clock(cube, 1);
+            right_clock(cube, 1);
+            up_anticlock(cube, 1);
+            right_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+            right_clock(cube, 1);
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+            front_anticlock(cube, 1);
+            right_clock(cube, 1);
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+            right_anticlock(cube, 1);
+            front_clock(cube, 1);
+            right_clock(cube, 1);
+            front_anticlock(cube, 1);
+        }
+        //PLL12
+        else if (cube->back.s[1][3] == cube->back.s[2][2] && cube->back.s[1][2] == cube->back.s[2][2] 
+            && cube->back.s[1][1] == cube->back.s[2][2] && cube->right.s[1][3] == cube->right.s[2][2] 
+            && cube->right.s[1][2] == cube->front.s[2][2] && cube->right.s[1][1] == cube->front.s[2][2] 
+            && cube->front.s[1][1] == cube->right.s[2][2] && cube->front.s[1][2] == cube->right.s[2][2] 
+            && cube->front.s[1][3] == cube->left.s[2][2] && cube->left.s[1][1] == cube->left.s[2][2] 
+            && cube->left.s[1][2] == cube->left.s[2][2] && cube->left.s[1][3] == cube->front.s[2][2])
+        {
+            left_anticlock(cube, 1);
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+            up_clock(cube, 2);
+            left_clock(cube, 1);
+            up_anticlock(cube, 1);
+            left_anticlock(cube, 1);
+            up_clock(cube, 2);
+            left_clock(cube, 1);
+            right_clock(cube, 1);
+            up_anticlock(cube, 1);
+        }
+        //PLL13
+        else if (cube->back.s[1][3] == cube->back.s[2][2] && cube->back.s[1][2] == cube->back.s[2][2] 
+            && cube->back.s[1][1] == cube->right.s[2][2] && cube->right.s[1][3] == cube->front.s[2][2] 
+            && cube->right.s[1][2] == cube->front.s[2][2] && cube->right.s[1][1] == cube->back.s[2][2] 
+            && cube->front.s[1][1] == cube->front.s[2][2] && cube->front.s[1][2] == cube->right.s[2][2] 
+            && cube->front.s[1][3] == cube->right.s[2][2] && cube->left.s[1][1] == cube->left.s[2][2] 
+            && cube->left.s[1][2] == cube->left.s[2][2] && cube->left.s[1][3] == cube->left.s[2][2])
+        {
+            right_clock(cube, 1);
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+            front_anticlock(cube, 1);
+            right_clock(cube, 1);
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+            right_anticlock(cube, 1);
+            front_clock(cube, 1);
+            right_clock(cube, 2);
+            up_anticlock(cube, 1);
+            right_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+        }
+        //PLL14
+        else if (cube->back.s[1][3] == cube->right.s[2][2] && cube->back.s[1][2] == cube->back.s[2][2] 
+            && cube->back.s[1][1] == cube->left.s[2][2] && cube->right.s[1][3] == cube->back.s[2][2] 
+            && cube->right.s[1][2] == cube->front.s[2][2] && cube->right.s[1][1] == cube->right.s[2][2] 
+            && cube->front.s[1][1] == cube->front.s[2][2] && cube->front.s[1][2] == cube->right.s[2][2] 
+            && cube->front.s[1][3] == cube->front.s[2][2] && cube->left.s[1][1] == cube->back.s[2][2] 
+            && cube->left.s[1][2] == cube->left.s[2][2] && cube->left.s[1][3] == cube->left.s[2][2])
+        {
+            right_anticlock(cube, 1);
+            up_clock(cube, 2);
+            right_clock(cube, 1);
+            up_clock(cube, 2);
+            right_anticlock(cube, 1);
+            front_clock(cube, 1);
+            right_clock(cube, 1);
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+            right_anticlock(cube, 1);
+            front_anticlock(cube, 1);
+            right_clock(cube, 2);
+            up_anticlock(cube, 1);
+        }
+        //PLL15
+        else if (cube->back.s[1][3] == cube->back.s[2][2] && cube->back.s[1][2] == cube->right.s[2][2] 
+            && cube->back.s[1][1] == cube->back.s[2][2] && cube->right.s[1][3] == cube->right.s[2][2] 
+            && cube->right.s[1][2] == cube->back.s[2][2] && cube->right.s[1][1] == cube->front.s[2][2] 
+            && cube->front.s[1][1] == cube->right.s[2][2] && cube->front.s[1][2] == cube->front.s[2][2] 
+            && cube->front.s[1][3] == cube->left.s[2][2] && cube->left.s[1][1] == cube->left.s[2][2] 
+            && cube->left.s[1][2] == cube->left.s[2][2] && cube->left.s[1][3] == cube->front.s[2][2])
+        {
+            right_clock(cube, 1);
+            up_clock(cube, 2);
+            right_anticlock(cube, 1);
+            up_clock(cube, 2);
+            right_clock(cube, 1);
+            back_anticlock(cube, 1);
+            right_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+            right_clock(cube, 1);
+            up_clock(cube, 1);
+            right_clock(cube, 1);
+            back_clock(cube, 1);
+            right_clock(cube, 2);
+            up_clock(cube, 1);
+        }
+        //PLL16
+        else if (cube->back.s[1][3] == cube->left.s[2][2] && cube->back.s[1][2] == cube->back.s[2][2] 
+            && cube->back.s[1][1] == cube->back.s[2][2] && cube->right.s[1][3] == cube->right.s[2][2] 
+            && cube->right.s[1][2] == cube->front.s[2][2] && cube->right.s[1][1] == cube->left.s[2][2] 
+            && cube->front.s[1][1] == cube->right.s[2][2] && cube->front.s[1][2] == cube->left.s[2][2] 
+            && cube->front.s[1][3] == cube->back.s[2][2] && cube->left.s[1][1] == cube->front.s[2][2] 
+            && cube->left.s[1][2] == cube->right.s[2][2] && cube->left.s[1][3] == cube->front.s[2][2])
+        {
+            right_clock(cube, 2);
+            down_anticlock(cube, 1);
+            front_clock(cube, 1);
+            up_anticlock(cube, 1);
+            front_clock(cube, 1);
+            up_clock(cube, 1);
+            front_anticlock(cube, 1);
+            down_clock(cube, 1);
+            right_clock(cube, 2);
+            back_clock(cube, 1);
+            up_anticlock(cube, 1);
+            back_anticlock(cube, 1);
+        }
+        //PLL17
+        else if (cube->back.s[1][3] == cube->right.s[2][2] && cube->back.s[1][2] == cube->left.s[2][2] 
+            && cube->back.s[1][1] == cube->front.s[2][2] && cube->right.s[1][3] == cube->left.s[2][2] 
+            && cube->right.s[1][2] == cube->right.s[2][2] && cube->right.s[1][1] == cube->right.s[2][2] 
+            && cube->front.s[1][1] == cube->left.s[2][2] && cube->front.s[1][2] == cube->back.s[2][2] 
+            && cube->front.s[1][3] == cube->front.s[2][2] && cube->left.s[1][1] == cube->back.s[2][2] 
+            && cube->left.s[1][2] == cube->front.s[2][2] && cube->left.s[1][3] == cube->back.s[2][2])
+        {
+            right_clock(cube, 1);
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+            front_clock(cube, 2);
+            down_anticlock(cube, 1);
+            left_clock(cube, 1);
+            up_anticlock(cube, 1);
+            left_anticlock(cube, 1);
+            up_clock(cube, 1);
+            left_anticlock(cube, 1);
+            down_clock(cube, 1);
+            front_clock(cube, 2);
+        }
+        //PLL18
+        else if (cube->back.s[1][3] == cube->right.s[2][2] && cube->back.s[1][2] == cube->left.s[2][2] 
+            && cube->back.s[1][1] == cube->front.s[2][2] && cube->right.s[1][3] == cube->left.s[2][2] 
+            && cube->right.s[1][2] == cube->back.s[2][2] && cube->right.s[1][1] == cube->right.s[2][2] 
+            && cube->front.s[1][1] == cube->left.s[2][2] && cube->front.s[1][2] == cube->front.s[2][2] 
+            && cube->front.s[1][3] == cube->front.s[2][2] && cube->left.s[1][1] == cube->back.s[2][2] 
+            && cube->left.s[1][2] == cube->right.s[2][2] && cube->left.s[1][3] == cube->back.s[2][2])
+        {
+            right_clock(cube, 2);
+            down_clock(cube, 1);
+            back_anticlock(cube, 1);
+            up_clock(cube, 1);
+            back_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+            back_clock(cube, 1);
+            down_anticlock(cube, 1);
+            right_clock(cube, 2);
+            front_anticlock(cube, 1);
+            up_clock(cube, 1);
+            front_clock(cube, 1);
+        }
+        //PLL19
+        else if (cube->back.s[1][3] == cube->right.s[2][2] && cube->back.s[1][2] == cube->front.s[2][2] 
+            && cube->back.s[1][1] == cube->back.s[2][2] && cube->right.s[1][3] == cube->right.s[2][2] 
+            && cube->right.s[1][2] == cube->right.s[2][2] && cube->right.s[1][1] == cube->left.s[2][2] 
+            && cube->front.s[1][1] == cube->right.s[2][2] && cube->front.s[1][2] == cube->left.s[2][2] 
+            && cube->front.s[1][3] == cube->back.s[2][2] && cube->left.s[1][1] == cube->front.s[2][2] 
+            && cube->left.s[1][2] == cube->back.s[2][2] && cube->left.s[1][3] == cube->front.s[2][2])
+        {
+            right_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+            right_clock(cube, 1);
+            back_clock(cube, 2);
+            down_clock(cube, 1);
+            left_anticlock(cube, 1);
+            up_anticlock(cube, 1);
+            left_clock(cube, 1);
+            up_anticlock(cube, 1);
+            left_clock(cube, 1);
+            down_anticlock(cube, 1);
+            back_clock(cube, 2);
+        }
+        //PLL20
+        else if (cube->back.s[1][3] == cube->front.s[2][2] && cube->back.s[1][2] == cube->front.s[2][2] 
+            && cube->back.s[1][1] == cube->back.s[2][2] && cube->right.s[1][3] == cube->right.s[2][2] 
+            && cube->right.s[1][2] == cube->right.s[2][2] && cube->right.s[1][1] == cube->left.s[2][2] 
+            && cube->front.s[1][1] == cube->front.s[2][2] && cube->front.s[1][2] == cube->back.s[2][2] 
+            && cube->front.s[1][3] == cube->back.s[2][2] && cube->left.s[1][1] == cube->right.s[2][2] 
+            && cube->left.s[1][2] == cube->left.s[2][2] && cube->left.s[1][3] == cube->left.s[2][2])
+        {
+            up_anticlock(cube, 1);
+            left_clock(cube, 1);
+            up_anticlock(cube, 1);
+            right_clock(cube, 1);
+            up_clock(cube, 2);
+            left_anticlock(cube, 1);
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+            left_clock(cube, 1);
+            up_anticlock(cube, 1);
+            right_clock(cube, 1);
+            up_clock(cube, 2);
+            left_anticlock(cube, 1);
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+        }
+        //PLL21
+        else if (cube->back.s[1][3] == cube->back.s[2][2] && cube->back.s[1][2] == cube->front.s[2][2] 
+            && cube->back.s[1][1] == cube->front.s[2][2] && cube->right.s[1][3] == cube->left.s[2][2] 
+            && cube->right.s[1][2] == cube->right.s[2][2] && cube->right.s[1][1] == cube->right.s[2][2] 
+            && cube->front.s[1][1] == cube->back.s[2][2] && cube->front.s[1][2] == cube->back.s[2][2] 
+            && cube->front.s[1][3] == cube->front.s[2][2] && cube->left.s[1][1] == cube->left.s[2][2] 
+            && cube->left.s[1][2] == cube->left.s[2][2] && cube->left.s[1][3] == cube->right.s[2][2])
+        {
+            left_anticlock(cube, 1);
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+            up_clock(cube, 2);
+            left_clock(cube, 1);
+            up_anticlock(cube, 1);
+            left_anticlock(cube, 1);
+            right_clock(cube, 1);
+            up_clock(cube, 1);
+            right_anticlock(cube, 1);
+            up_clock(cube, 2);
+            left_clock(cube, 1);
+            up_anticlock(cube, 1);
+            right_clock(cube, 1);
+            up_anticlock(cube, 1);
+        }
+        else
+        {
+            if (flag_pll < 4)
+            {
+                up_clock(cube, 1);
+                flag_pll++;
+            }
+            else
+            {
+                cube_clock(cube, 1);
+                flag_pll = 0;
+            }
+        }                       
+    }
+}
